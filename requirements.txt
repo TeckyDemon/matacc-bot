@@ -1,0 +1,4 @@
+requests[security]
+argparse
+colorama
+user_agent
