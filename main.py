@@ -12,6 +12,8 @@ from threading import Thread,Lock
 from user_agent import generate_user_agent
 
 def exit(exit_code):
+	global args,data
+	open(args.accounts_file,'w+').write('\n'.join(data))
 	if exit_code==1:
 		print_exc()
 	_exit(exit_code)
@@ -64,11 +66,12 @@ def bot(id):
 			})
 			if b'UDA\xc5\x81O SI\xc4\x98! Twoje konto zosta\xc5\x82o utworzone.' in response.content:
 				print('[INFO][%d] Successfully created account!'%id)
+				with locks[1]:data.append('%s@gmail.com\t%s'%(email,password))
 			else:
 				print('[ERROR][%d] Could not create account!'%id)
 		except KeyboardInterrupt:pass
 		except:
-			with locks[1]:exception=format_exc()
+			with locks[2]:exception=format_exc()
 
 if __name__=='__main__':
 	try:
@@ -77,6 +80,7 @@ if __name__=='__main__':
 		parser.add_argument('-t','--threads',type=int,help='set number of the threads',default=15)
 		parser.add_argument('-p','--proxies',help='set the path of the proxies list')
 		parser.add_argument('-us','--user-agent',help='set the user agent/set the path of to the list of user agents')
+		parser.add_argument('-af','--accounts-file',help='set the path of the output file with the accounts',default='accounts.txt')
 		args=parser.parse_args()
 		if args.user_agent:
 			if path.isfile(args.user_agent):
@@ -85,8 +89,9 @@ if __name__=='__main__':
 				user_agents=[args.user_agent]
 		else:
 			user_agents=generate_user_agent
-		locks=[Lock() for _ in range(2)]
+		locks=[Lock() for _ in range(3)]
 		proxies=[]
+		data=[]
 		for i in range(args.threads):
 			t=Thread(target=bot,args=(i+1,))
 			t.daemon=True

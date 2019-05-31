@@ -67,13 +67,14 @@ cd ..
 
 ### Arguments
 
-| Argument                        | Description                                           | Default value                  |
-| :---                            | :---                                                  | :---                           |
-| -h<br>--help                    | Shows help message.                                   |                                |
-| -t T<br>--threads T             | Sets the number of threads to **T**.                  | 15                             |
-| -p PATH<br>--proxies PATH       | Sets the path to the list of proxies to **PATH**.     | Proxies list from internet.    |
-| -us AGENT<br>--user-agent AGENT | Sets the user agent to **AGENT**.                     | Randomly generated user agent. |
-| -us PATH<br>--user-agent PATH   | Sets the path to the list of user agents to **PATH**. |                                |
+| Argument                         | Description                                                     | Default value                  |
+| :---                             | :---                                                            | :---                           |
+| -h<br>--help                     | Shows help message.                                             |                                |
+| -t T<br>--threads T              | Sets the number of threads to **T**.                            | 15                             |
+| -p PATH<br>--proxies PATH        | Sets the path to the list of proxies to **PATH**.               | Proxies list from internet.    |
+| -us AGENT<br>--user-agent AGENT  | Sets the user agent to **AGENT**.                               | Randomly generated user agent. |
+| -us PATH<br>--user-agent PATH    | Sets the path to the list of user agents to **PATH**.           |                                |
+| -af PATH<br>--accounts-file PATH | Sets the path of the output file with the accounts to **PATH**. | accounts.txt                   |
 
 ## Disclaimer
 
