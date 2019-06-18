@@ -10,11 +10,12 @@ from traceback import format_exc
 from threading import Thread,Lock,Event
 
 def exit(exit_code):
-	global args,accounts
-	with open(args.output,'w+') as f:
-		f.write('\n'.join(accounts))
-	logv('[INFO] Exiting with exit code %d'%exit_code)
-	_exit(exit_code)
+	global args,locks,accounts
+	with locks[2]:
+		with open(args.output,'w+') as f:
+			f.write('\n'.join(accounts))
+		logv('[INFO] Exiting with exit code %d'%exit_code)
+		_exit(exit_code)
 def logv(message):
 	stdout.write('%s\n'%message)
 	if message.startswith('[ERROR]'):
@@ -91,7 +92,7 @@ if __name__=='__main__':
 		parser.add_argument('-o','--output',help='set the path of the output file',default='accounts.txt')
 		parser.add_argument('-d','--debug',help='show all logs',action='store_true')
 		args=parser.parse_args()
-		locks=[Lock() for _ in range(2)]
+		locks=[Lock() for _ in range(3)]
 		exception_event=Event()
 		proxies=[]
 		accounts=[]
