@@ -1,7 +1,6 @@
 @echo off
 title MatAcc-Bot installer
 color 0a
-call :is_installed git , https://git-scm.com/downloads || exit /B %errorlevel%
 call :is_installed python , https://www.python.org/ || exit /B %errorlevel%
 pip install -Ur requirements.txt
 echo Successfully installed MatAcc-Bot.

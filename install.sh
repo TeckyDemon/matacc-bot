@@ -48,39 +48,6 @@ case "$(uname -s)" in
 					;;
 			esac
 		done
-
-		echo "Select browser for the bot."
-		options=("Google Chrome" "Mozilla Firefox")
-		select option in "${options[@]}"
-		do
-			case $option in
-				"Google Chrome")
-					commands=$(cat<<-EOT
-						$commands
-						$install chromium
-					EOT
-					)
-					break
-					;;
-				"Mozilla Firefox")
-					if [[ "$(uname -m)" == "x86_64" ]]; then
-						arch=32
-					else
-						arch=64
-					fi
-					commands=$(cat<<-EOT
-						$commands
-						wget "https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux$arch.tar.gz"
-						tar -xvzf geckodriver*
-						sudo chmod +x geckodriver
-						sudo mv geckodriver /usr/bin
-						sudo rm geckodriver*
-					EOT
-					)
-					break
-					;;
-			esac
-		done
 		;;
 	Darwin)
 		commands=$(cat<<-EOT
@@ -89,33 +56,6 @@ case "$(uname -s)" in
 			pip install -Ur requirements.txt
 		EOT
 		)
-		echo "Select browser for the bot."
-		options=("Google Chrome" "Mozilla Firefox")
-		select option in "${options[@]}"
-		do
-			case $option in
-				"Google Chrome")
-					commands=$(cat<<-EOT
-						$commands
-						brew install chromium
-					EOT
-					)
-					break
-					;;
-				"Mozilla Firefox")
-					commands=$(cat<<-EOT
-						$commands
-						wget "https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-macos.tar.gz"
-						tar -xvzf geckodriver*
-						sudo chmod +x geckodriver
-						sudo mv geckodriver /usr/bin
-						sudo rm geckodriver*
-					EOT
-					)
-					break
-					;;
-			esac
-		done
 		;;
 	*)
 		echo "Your OS is not supported."

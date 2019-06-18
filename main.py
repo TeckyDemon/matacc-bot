@@ -1,42 +1,40 @@
-from __future__ import print_function
+import re
 import requests
-from os import _exit,path,devnull
+from os import _exit
 from sys import stdout
 from time import sleep
-from random import seed,choice,randint
+from random import choice,randint
 from string import ascii_letters,digits
-from colorama import Fore
 from argparse import ArgumentParser
-from traceback import format_exc,print_exc
-from threading import Thread,Lock
-from user_agent import generate_user_agent
+from traceback import format_exc
+from threading import Thread,Lock,Event
 
 def exit(exit_code):
-	global args,data
-	open(args.accounts_file,'w+').write('\n'.join(data))
-	if exit_code==1:
-		print_exc()
+	global args,accounts
+	with open(args.output,'w+') as f:
+		f.write('\n'.join(accounts))
+	logv('[INFO] Exiting with exit code %d'%exit_code)
 	_exit(exit_code)
-def print(message):
+def logv(message):
+	stdout.write('%s\n'%message)
 	if message.startswith('[ERROR]'):
-		colour=Fore.RED
-	elif message.startswith('[WARNING]'):
-		colour=Fore.YELLOW
-	elif message.startswith('[INFO]'):
-		colour=Fore.GREEN
-	else:
-		colour=Fore.RESET
-	stdout.write('%s%s%s\n'%(colour,message,Fore.RESET))
+		exit(1)
+def log(message):
+	global args
+	if args.debug:
+		logv(message)
 def get_proxies():
 	global args
 	if args.proxies:
 		proxies=open(args.proxies,'r').read().strip().split('\n')
 	else:
 		proxies=requests.get('https://www.proxy-list.download/api/v1/get?type=http&anon=elite').content.decode().strip().split('\r\n')
-	print('[INFO][0] %d proxies successfully loaded!'%len(proxies))
+	log('[INFO] %d proxies successfully loaded!'%len(proxies))
 	return proxies
+def get_random_string(min,max):
+	return ''.join([choice(ascii_letters+digits) for _ in range(randint(min,max))])
 def bot(id):
-	global locks,user_agents,proxies
+	global args,locks,exception,exception_event,proxies
 	while True:
 		try:
 			with locks[0]:
@@ -44,64 +42,64 @@ def bot(id):
 					proxies.extend(get_proxies())
 				proxy=choice(proxies)
 				proxies.remove(proxy)
-			print('[INFO][%d] Connecting to %s'%(id,proxy))
-			user_agent=choice(user_agents) if args.user_agent else user_agents()
-			print('[INFO][%d] Setting user agent to %s'%(id,user_agent))
-			email=''.join([choice(ascii_letters+digits) for _ in range(randint(1,20))])
-			print('[INFO][%d] Setting email to %s@gmail.com'%(id,email))
-			password=''.join([choice(ascii_letters+digits) for _ in range(randint(8,20))])
-			print('[INFO][%d] Setting password to %s'%(id,password))
-			response=requests.post('http://matzoo.pl/rejestracja',data={
-				'email1':'%s@gmail.com'%email,
-				'email2':'%s@gmail.com'%email,
-				'password1':password,
-				'password2':password,
-				'regulamin':'1',
-				'zgoda':'1',
-				'newsletter':'1'
-			},headers={
-				'User-Agent':user_agent
-			},proxies={
-				'http':proxy
-			})
-			if b'UDA\xc5\x81O SI\xc4\x98! Twoje konto zosta\xc5\x82o utworzone.' in response.content:
-				print('[INFO][%d] Successfully created account!'%id)
-				with locks[1]:data.append('%s@gmail.com\t%s'%(email,password))
+			log('[INFO][%d] Connecting to %s'%(id,proxy))
+			user_agent=get_random_string(10,100)
+			log('[INFO][%d] Setting user agent to %s'%(id,user_agent))
+			email='%s@%s'%(
+				get_random_string(8,40),
+				choice(['gmail.com','yahoo.com','hotmail.com','aol.com'])
+			)
+			log('[INFO][%d] Setting email to %s'%(id,email))
+			password=get_random_string(8,40)
+			log('[INFO][%d] Setting password to %s'%(id,password))
+			response=requests.post(
+				'http://matzoo.pl/rejestracja',
+				data={
+					'email1':email,
+					'email2':email,
+					'password1':password,
+					'password2':password,
+					'regulamin':'1',
+					'zgoda':'1',
+					'newsletter':'1',
+					'kod':'cztery'
+				},
+				headers={
+					'User-Agent':user_agent
+				},
+				proxies={
+					'http':proxy
+				},
+				timeout=30
+			)
+			if b'UDA\xc5\x81O SI\xc4\x98!' in response.content:
+				with locks[1]:
+					accounts.append('%s\t%s'%(email,password))
+				logv('[INFO][%d] Successfully created account'%id)
 			else:
-				print('[ERROR][%d] Could not create account!'%id)
-		except KeyboardInterrupt:pass
+				logv('[INFO][%d] Could not create account'%id)
+		except (OSError,KeyboardInterrupt):pass
 		except:
-			with locks[2]:exception=format_exc()
+			exception=format_exc()
+			exception_event.set()
 
 if __name__=='__main__':
 	try:
-		seed()
 		parser=ArgumentParser()
 		parser.add_argument('-t','--threads',type=int,help='set number of the threads',default=15)
-		parser.add_argument('-p','--proxies',help='set the path of the proxies list')
-		parser.add_argument('-us','--user-agent',help='set the user agent/set the path of to the list of user agents')
-		parser.add_argument('-af','--accounts-file',help='set the path of the output file with the accounts',default='accounts.txt')
+		parser.add_argument('-p','--proxies',help='set the path to the list with the proxies')
+		parser.add_argument('-o','--output',help='set the path of the output file',default='accounts.txt')
+		parser.add_argument('-d','--debug',help='show all logs',action='store_true')
 		args=parser.parse_args()
-		if args.user_agent:
-			if path.isfile(args.user_agent):
-				user_agents=open(args.user_agent,'r').read().strip().split('\n')
-			else:
-				user_agents=[args.user_agent]
-		else:
-			user_agents=generate_user_agent
-		locks=[Lock() for _ in range(3)]
+		locks=[Lock() for _ in range(2)]
+		exception_event=Event()
 		proxies=[]
-		data=[]
+		accounts=[]
 		for i in range(args.threads):
 			t=Thread(target=bot,args=(i+1,))
 			t.daemon=True
 			t.start()
-		while True:
-			try:exception
-			except:pass
-			else:
-				print(exception)
-				exit(2)
-			sleep(0.25)
+		exception_event.wait()
+		logv('[ERROR] %s'%exception)
 	except KeyboardInterrupt:exit(0)
 	except:exit(1)
