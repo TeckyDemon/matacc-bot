@@ -46,14 +46,14 @@ def bot(id):
 				proxy=choice(proxies)
 				proxies.remove(proxy)
 			log('[INFO][%d] Connecting to %s'%(id,proxy))
-			user_agent=get_random_string(10,100)
+			user_agent=get_random_string(30,100)
 			log('[INFO][%d] Setting user agent to %s'%(id,user_agent))
-			email='%s@%s'%(
-				get_random_string(8,40),
-				choice(['gmail.com','yahoo.com','hotmail.com','aol.com'])
+			email='%s@%s.com'%(
+				get_random_string(8,500),
+				get_random_string(8,500)
 			)
 			log('[INFO][%d] Setting email to %s'%(id,email))
-			password=get_random_string(8,40)
+			password=get_random_string(8,500)
 			log('[INFO][%d] Setting password to %s'%(id,password))
 			response=requests.post(
 				'http://matzoo.pl/rejestracja',
