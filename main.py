@@ -8,14 +8,16 @@ from string import ascii_letters,digits
 from argparse import ArgumentParser
 from traceback import format_exc
 from threading import Thread,Lock,Event
+from requests.exceptions import RequestException
 
 def exit(exit_code):
-	global args,locks,accounts
-	with locks[2]:
+	global args,accounts
+	try:
 		with open(args.output,'w+') as f:
 			f.write('\n'.join(accounts))
-		logv('[INFO] Exiting with exit code %d'%exit_code)
-		_exit(exit_code)
+	except:pass
+	logv('[INFO] Exiting with exit code %d'%exit_code)
+	_exit(exit_code)
 def logv(message):
 	stdout.write('%s\n'%message)
 	if message.startswith('[ERROR]'):
@@ -71,7 +73,7 @@ def bot(id):
 				proxies={
 					'http':proxy
 				},
-				timeout=30
+				timeout=10
 			)
 			if b'UDA\xc5\x81O SI\xc4\x98!' in response.content:
 				with locks[1]:
@@ -79,7 +81,9 @@ def bot(id):
 				logv('[INFO][%d] Successfully created account'%id)
 			else:
 				logv('[INFO][%d] Could not create account'%id)
-		except (OSError,KeyboardInterrupt):pass
+		except RequestException as e:
+			log('[WARNING][%d] %s'%(id,e.__class__.__name__))
+		except KeyboardInterrupt:pass
 		except:
 			exception=format_exc()
 			exception_event.set()
@@ -103,4 +107,5 @@ if __name__=='__main__':
 		exception_event.wait()
 		logv('[ERROR] %s'%exception)
 	except KeyboardInterrupt:exit(0)
-	except:exit(1)
+	except Exception as e:
+		logv('[ERROR] %s'%e)
