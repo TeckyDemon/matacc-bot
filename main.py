@@ -1,14 +1,13 @@
-import re
-import requests
 from os import _exit
 from sys import stdout
 from time import sleep
 from random import choice,randint
 from string import ascii_letters,digits
 from argparse import ArgumentParser
-from traceback import format_exc
-from threading import Thread,Lock,Event
+from requests import get as requests_get,post as requests_post
 from requests.exceptions import RequestException
+from traceback import print_exc
+from threading import Thread,Lock,Event
 
 def exit(exit_code):
 	global args,accounts
@@ -16,7 +15,9 @@ def exit(exit_code):
 		with open(args.output,'w+') as f:
 			f.write('\n'.join(accounts))
 	except:pass
-	logv('[INFO] Exiting with exit code %d'%exit_code)
+	if exit_code:
+		print_exc()
+	stdout.write('\r[INFO] Exiting with exit code %d\n'%exit_code)
 	_exit(exit_code)
 def logv(message):
 	stdout.write('%s\n'%message)
@@ -31,13 +32,13 @@ def get_proxies():
 	if args.proxies:
 		proxies=open(args.proxies,'r').read().strip().split('\n')
 	else:
-		proxies=requests.get('https://www.proxy-list.download/api/v1/get?type=http&anon=elite').content.decode().strip().split('\r\n')
+		proxies=requests_get('https://www.proxy-list.download/api/v1/get?type=http&anon=elite').content.decode().strip().split('\r\n')
 	log('[INFO] %d proxies successfully loaded!'%len(proxies))
 	return proxies
 def get_random_string(min,max):
 	return ''.join([choice(ascii_letters+digits) for _ in range(randint(min,max))])
 def bot(id):
-	global args,locks,exception,exception_event,proxies
+	global args,locks,proxies
 	while True:
 		try:
 			with locks[0]:
@@ -55,7 +56,7 @@ def bot(id):
 			log('[INFO][%d] Setting email to %s'%(id,email))
 			password=get_random_string(8,500)
 			log('[INFO][%d] Setting password to %s'%(id,password))
-			response=requests.post(
+			response=requests_post(
 				'http://matzoo.pl/rejestracja',
 				data={
 					'email1':email,
@@ -83,10 +84,8 @@ def bot(id):
 				logv('[INFO][%d] Could not create account'%id)
 		except RequestException as e:
 			log('[WARNING][%d] %s'%(id,e.__class__.__name__))
-		except KeyboardInterrupt:pass
-		except:
-			exception=format_exc()
-			exception_event.set()
+		except KeyboardInterrupt:exit(0)
+		except:exit(2)
 
 if __name__=='__main__':
 	try:
@@ -94,7 +93,7 @@ if __name__=='__main__':
 		parser.add_argument('-t','--threads',type=int,help='set number of the threads',default=15)
 		parser.add_argument('-p','--proxies',help='set the path to the list with the proxies')
 		parser.add_argument('-o','--output',help='set the path of the output file',default='accounts.txt')
-		parser.add_argument('-d','--debug',help='show all logs',action='store_true')
+		parser.add_argument('-d','--debug',help='show all logs',action='count')
 		args=parser.parse_args()
 		locks=[Lock() for _ in range(3)]
 		exception_event=Event()
@@ -104,8 +103,8 @@ if __name__=='__main__':
 			t=Thread(target=bot,args=(i+1,))
 			t.daemon=True
 			t.start()
-		exception_event.wait()
-		logv('[ERROR] %s'%exception)
+		for t in list_threads()[1:]:
+			t.join()
+	except SystemExit as e:exit(int(str(e)))
 	except KeyboardInterrupt:exit(0)
-	except Exception as e:
-		logv('[ERROR] %s'%e)
+	except:exit(1)
