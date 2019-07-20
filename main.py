@@ -1,31 +1,50 @@
-from os import _exit
-from sys import stdout
-from time import sleep
-from random import choice,randint
-from string import ascii_letters,digits
-from argparse import ArgumentParser
-from requests import get as requests_get,post as requests_post
-from requests.exceptions import RequestException
-from traceback import print_exc
-from threading import Thread,Lock,Event
-
 def exit(exit_code):
 	global args,accounts
-	try:
-		with open(args.output,'w+') as f:
-			f.write('\n'.join(accounts))
-	except:pass
+	try:accounts
+	except NameError:pass
+	else:accounts.close()
 	if exit_code:
 		print_exc()
 	stdout.write('\r[INFO] Exiting with exit code %d\n'%exit_code)
 	_exit(exit_code)
 def logv(message):
+	global args
 	stdout.write('%s\n'%message)
 	if message.startswith('[ERROR]'):
 		exit(1)
+	try:args
+	except NameError:pass
+	else:
+		if args.debug:
+			if message.startswith('[WARNING]'):
+				exit(1)
+
+if __name__=='__main__':
+	from os import _exit
+	from sys import stdout
+	from traceback import print_exc
+	while True:
+		try:
+			from time import sleep
+			from random import choice,randint
+			from string import ascii_letters,digits
+			from argparse import ArgumentParser
+			from requests import get as requests_get,post as requests_post
+			from requests.exceptions import RequestException
+			from threading import Thread,Lock,enumerate as list_threads
+			break
+		except:
+			try:INSTALLED
+			except NameError:
+				try:from urllib import urlopen
+				except:from urllib.request import urlopen
+				argv=['MatAcc-Bot',False]
+				exec(urlopen('https://raw.githubusercontent.com/DeBos99/multi-installer/master/install.py').read().decode())
+			else:exit(1)
+
 def log(message):
 	global args
-	if args.debug:
+	if args.verbose:
 		logv(message)
 def get_proxies():
 	global args
@@ -38,7 +57,7 @@ def get_proxies():
 def get_random_string(min,max):
 	return ''.join([choice(ascii_letters+digits) for _ in range(randint(min,max))])
 def bot(id):
-	global args,locks,proxies
+	global args,locks,proxies,accounts
 	while True:
 		try:
 			with locks[0]:
@@ -78,14 +97,15 @@ def bot(id):
 			)
 			if b'UDA\xc5\x81O SI\xc4\x98!' in response.content:
 				with locks[1]:
-					accounts.append('%s\t%s'%(email,password))
+					accounts.write('%s\t%s\n'%(email,password))
+					accounts.flush()
 				logv('[INFO][%d] Successfully created account'%id)
 			else:
 				logv('[INFO][%d] Could not create account'%id)
 		except RequestException as e:
 			log('[WARNING][%d] %s'%(id,e.__class__.__name__))
 		except KeyboardInterrupt:exit(0)
-		except:exit(2)
+		except:exit(1)
 
 if __name__=='__main__':
 	try:
@@ -93,12 +113,13 @@ if __name__=='__main__':
 		parser.add_argument('-t','--threads',type=int,help='set number of the threads',default=15)
 		parser.add_argument('-p','--proxies',help='set the path to the list with the proxies')
 		parser.add_argument('-o','--output',help='set the path of the output file',default='accounts.txt')
-		parser.add_argument('-d','--debug',help='show all logs',action='count')
+		parser.add_argument('-v','--verbose',help='enable verbose mode',action='store_true')
+		parser.add_argument('-d','--debug',help='enable debug mode',action='store_true')
 		args=parser.parse_args()
+		args.verbose=args.debug or args.verbose
 		locks=[Lock() for _ in range(3)]
-		exception_event=Event()
 		proxies=[]
-		accounts=[]
+		accounts=open(args.output,'w+')
 		for i in range(args.threads):
 			t=Thread(target=bot,args=(i+1,))
 			t.daemon=True
